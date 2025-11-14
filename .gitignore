@@ -26,12 +26,6 @@
 # Shiny token
 rsconnect/
 
-# Plots and images
-*.png
-*.jpg
-*.jpeg
-*.pdf
-
 # It's often a good idea to ignore large data files.
 # If your data is sensitive or very large, uncomment the line below.
 # data/

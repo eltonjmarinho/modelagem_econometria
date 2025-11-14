@@ -44,14 +44,19 @@ source("views/plot_view.R")
 # --- 3. Execução do Fluxo Principal ---
 message("Iniciando o fluxo principal de análise...")
 
+# Criar diretório para salvar os gráficos
+dir.create("plots", showWarnings = FALSE)
+
 # 3.1. Obter os dados
 coffee_data <- fetch_coffee_data()
 message("Dados de café carregados com sucesso. Amostra:")
 print(head(coffee_data))
 
 # 3.2. Visualizar a série temporal
-message("Gerando gráfico da série temporal...")
-plot_time_series(coffee_data, title = "Preços Futuros do Café (CFE)")
+message("Gerando e salvando gráfico da série temporal...")
+plot_time_series(coffee_data, 
+                 title = "Preços Futuros do Café (CFE)", 
+                 filename = "plots/01_time_series.png")
 
 # 3.3. Teste de Estacionariedade
 # Converter para objeto de série temporal
@@ -60,13 +65,17 @@ coffee_ts <- ts(coffee_data$price)
 stationarity_test_result <- perform_stationarity_test(coffee_ts)
 
 # 3.4. Análise de Autocorrelação
-message("--- Gerando gráficos ACF e PACF ---")
+message("--- Gerando e salvando gráficos ACF e PACF ---")
 message("Analisando a série original (provavelmente não-estacionária):")
-plot_acf_pacf(coffee_ts, title_suffix = " - Série Original")
+plot_acf_pacf(coffee_ts, 
+              title_suffix = " - Série Original", 
+              filename = "plots/02_acf_pacf_original.png")
 
 message("
 Analisando a série diferenciada (para identificar p, q):")
-plot_acf_pacf(diff(coffee_ts), title_suffix = " - Série Diferenciada")
+plot_acf_pacf(diff(coffee_ts), 
+              title_suffix = " - Série Diferenciada", 
+              filename = "plots/03_acf_pacf_diferenciada.png")
 
 # 3.5. Ajuste dos Modelos ARIMA
 message("--- Ajustando Modelos ARIMA ---")
@@ -93,11 +102,17 @@ fitted_models <- list(
 message("Modelos ajustados com sucesso.")
 
 # 3.6. Análise de Resíduos e Seleção de Modelo
-message("--- Iniciando Análise de Resíduos para Seleção de Modelo ---")
+message("--- Iniciando Análise de Resíduos e salvando gráficos ---")
 for (model_name in names(fitted_models)) {
   model <- fitted_models[[model_name]]
+  
+  # Cria um nome de arquivo seguro a partir do nome do modelo (ex: "AR(1)" -> "AR1")
+  sanitized_model_name <- gsub("[()]", "", model_name)
+  
   analyze_model_residuals(model_name, model)
-  plot_residual_diagnostics(model_name, model)
+  plot_residual_diagnostics(model_name, 
+                            model, 
+                            filename = paste0("plots/04_residuals_", sanitized_model_name, ".png"))
 }
 
 # 3.7. Conclusão Final
