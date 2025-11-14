@@ -1,0 +1,4 @@
+# Liste os pacotes R necessários aqui, um por linha.
+# Exemplo:
+# tidyverse
+# ggplot2

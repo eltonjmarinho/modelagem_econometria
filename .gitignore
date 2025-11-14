@@ -1,0 +1,37 @@
+# History files
+.Rhistory
+.Rapp.history
+
+# Session Data files
+.RData
+
+# User-specific files
+.Rproj.user/
+
+# RStudio files
+.rstudio-themes/
+.rstudio-prefs
+
+# Knitr and R Markdown cache directories
+*_cache/
+/cache/
+
+# R packages directory
+/library/
+/renv/
+
+# OAuth2 token, see https://github.com/hadley/httr/releases/tag/v0.3
+.httr-oauth
+
+# Shiny token
+rsconnect/
+
+# Plots and images
+*.png
+*.jpg
+*.jpeg
+*.pdf
+
+# It's often a good idea to ignore large data files.
+# If your data is sensitive or very large, uncomment the line below.
+# data/
