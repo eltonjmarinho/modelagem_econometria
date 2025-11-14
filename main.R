@@ -68,6 +68,30 @@ message("
 Analisando a série diferenciada (para identificar p, q):")
 plot_acf_pacf(diff(coffee_ts), title_suffix = " - Série Diferenciada")
 
+# 3.5. Ajuste dos Modelos ARIMA
+message("--- Ajustando Modelos ARIMA ---")
+
+# A série temporal já foi criada: coffee_ts
+# Vamos ajustar os modelos mencionados na conclusão do script.
+
+# Modelo AR(1) ou ARIMA(1,0,0)
+ar1_model <- Arima(coffee_ts, order = c(1, 0, 0))
+
+# Modelo ARMA(1,1) ou ARIMA(1,0,1)
+arma11_model <- Arima(coffee_ts, order = c(1, 0, 1))
+
+# Modelo ARIMA(1,1,1) - o mais provável
+arima111_model <- Arima(coffee_ts, order = c(1, 1, 1))
+
+# Armazena os modelos em uma lista nomeada
+fitted_models <- list(
+  "AR(1)" = ar1_model,
+  "ARMA(1,1)" = arma11_model,
+  "ARIMA(1,1,1)" = arima111_model
+)
+
+message("Modelos ajustados com sucesso.")
+
 # 3.6. Análise de Resíduos e Seleção de Modelo
 message("--- Iniciando Análise de Resíduos para Seleção de Modelo ---")
 for (model_name in names(fitted_models)) {

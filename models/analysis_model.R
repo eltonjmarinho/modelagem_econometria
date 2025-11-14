@@ -1,17 +1,14 @@
+# Função para realizar o teste de estacionariedade
+perform_stationarity_test <- function(time_series) {
+  # Use Augmented Dickey-Fuller test from tseries package
+  adf_test <- tseries::adf.test(time_series)
+  print(adf_test)
+  # Return the p-value
+  return(adf_test$p.value)
+}
+
 # Função para analisar os resíduos de um modelo
 analyze_model_residuals <- function(model_name, model_object) {
-  
-  # Função para realizar o teste de estacionariedade
-  perform_stationarity_test <- function(time_series) {
-    # Use Augmented Dickey-Fuller test from tseries package
-    adf_test <- tseries::adf.test(time_series)
-    print(adf_test)
-    # Return the p-value
-    return(adf_test$p.value)
-  }
-
-
-
   message(paste("\n--- Análise de Resíduos para o Modelo:", model_name, "---"))
   
   res <- residuals(model_object)
@@ -39,6 +36,6 @@ analyze_model_residuals <- function(model_name, model_object) {
   if (ljung_box_test$p.value > 0.05) {
     message("Conclusão: p-valor > 0.05. Não há evidência de autocorrelação nos resíduos (resíduos são ruído branco).")
   } else {
-    message("Conclusão: p-valor <= 0.05. Há evidência de autocorrelação nos resíduos (modelo pode ser inadequado).")
+      message("Conclusão: p-valor <= 0.05. Há evidência de autocorrelação nos resíduos (modelo pode ser inadequado).")
   }
 }
