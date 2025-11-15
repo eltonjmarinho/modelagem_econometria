@@ -108,34 +108,101 @@ plot_forecast <- function(model, data, h = 30) {
   ggplotly(p)
 }
 
-# Função para salvar uma lista de elementos (gráficos, texto) em um único HTML
+# Função para salvar uma lista de elementos (gráficos, texto) em um único HTML com design aprimorado
 save_report_as_html <- function(items, filename) {
+  
+  # CSS para um design moderno e profissional
+  css <- "
+    @import url('https://fonts.googleapis.com/css2?family=Lato:wght@400;700&display=swap');
+    
+    body {
+      font-family: 'Lato', sans-serif;
+      background-color: #f4f4f9;
+      color: #333;
+      margin: 0;
+      padding: 20px;
+      line-height: 1.6;
+    }
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      background-color: #ffffff;
+      padding: 20px 40px;
+      border-radius: 10px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+    }
+    h1, h2, h3 {
+      color: #2c3e50;
+      border-bottom: 2px solid #e0e0e0;
+      padding-bottom: 10px;
+      margin-top: 30px;
+    }
+    h1 {
+      font-size: 2.5em;
+      text-align: center;
+      border-bottom: none;
+      margin-bottom: 20px;
+    }
+    h2 {
+      font-size: 2em;
+    }
+    h3 {
+      font-size: 1.5em;
+      border-bottom: 1px solid #e0e0e0;
+    }
+    .card {
+      background-color: #fdfdfd;
+      border: 1px solid #e0e0e0;
+      border-radius: 8px;
+      padding: 20px;
+      margin-top: 20px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.03);
+      overflow: hidden; /* Para conter os gráficos */
+    }
+    pre {
+      background-color: #ecf0f1;
+      padding: 15px;
+      border-radius: 5px;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+      font-family: monospace;
+      color: #2c3e50;
+    }
+    .plotly {
+        width: 100% !important;
+    }
+  "
+  
   # Converte todos os itens para tags HTML
   html_items <- lapply(items, function(item) {
-    if (inherits(item, "htmlwidget")) {
-      # Para gráficos plotly/htmlwidget
-      tags$div(style = "width:100%; height:auto; margin-bottom: 20px;", item)
-    } else if (is.character(item)) {
-      # Para texto (que pode conter HTML)
-      tags$div(style = "width:100%; margin-bottom: 20px;", HTML(item))
+    # Apenas envolve widgets e texto de teste (que são strings HTML) em cards
+    if (inherits(item, "htmlwidget") || (is.character(item) && grepl("<h4>", item))) {
+      tags$div(class = "card", {
+        if (inherits(item, "htmlwidget")) item else HTML(item)
+      })
     } else {
-      # Para outros tipos de tags htmltools
-      item
+      # Deixa os outros elementos (como h2, h3, p) como estão
+      if (is.character(item)) HTML(item) else item
     }
   })
   
   # Cria o corpo do HTML com todos os itens
   doc <- tags$html(
     tags$head(
-      tags$title("Relatório de Análise de Séries Temporais")
+      tags$meta(charset = "UTF-8"),
+      tags$meta(name = "viewport", content = "width=device-width, initial-scale=1.0"),
+      tags$title("Relatório de Análise de Séries Temporais"),
+      tags$style(HTML(css))
     ),
     tags$body(
-      h1("Relatório de Análise de Séries Temporais - Preços do Café"),
-      html_items
+      tags$div(class = "container",
+        tags$h1("Relatório de Análise de Séries Temporais - Preços do Café"),
+        html_items
+      )
     )
   )
   
-  save_html(doc, file = filename, background = "white", libdir = "lib")
+  save_html(doc, file = filename, background = "#f4f4f9", libdir = "lib")
   
   message(paste("Relatório HTML completo salvo em:", filename))
 }
