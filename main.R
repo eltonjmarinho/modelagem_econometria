@@ -9,7 +9,7 @@
 
 # --- 1. Carga de Pacotes ---
 # Lista de pacotes necessários
-packages <- c("tidyverse", "rb3", "forecast", "tseries", "remotes")
+packages <- c("tidyverse", "rb3", "forecast", "tseries", "remotes", "plotly", "htmlwidgets")
 
 # Função para instalar pacotes se não estiverem presentes
 install_if_missing <- function(pkg) {
@@ -53,10 +53,10 @@ message("Dados de café carregados com sucesso. Amostra:")
 print(head(coffee_data))
 
 # 3.2. Visualizar a série temporal
-message("Gerando e salvando gráfico da série temporal...")
+message("Gerando e salvando gráfico interativo da série temporal...")
 plot_time_series(coffee_data, 
                  title = "Preços Futuros do Café (CFE)", 
-                 filename = "plots/01_time_series.png")
+                 filename = "plots/01_time_series.html")
 
 # 3.3. Teste de Estacionariedade
 # Converter para objeto de série temporal
@@ -65,17 +65,17 @@ coffee_ts <- ts(coffee_data$price)
 stationarity_test_result <- perform_stationarity_test(coffee_ts)
 
 # 3.4. Análise de Autocorrelação
-message("--- Gerando e salvando gráficos ACF e PACF ---")
+message("--- Gerando e salvando gráficos interativos ACF e PACF ---")
 message("Analisando a série original (provavelmente não-estacionária):")
 plot_acf_pacf(coffee_ts, 
               title_suffix = " - Série Original", 
-              filename = "plots/02_acf_pacf_original.png")
+              filename = "plots/02_acf_pacf_original.html")
 
 message("
 Analisando a série diferenciada (para identificar p, q):")
 plot_acf_pacf(diff(coffee_ts), 
               title_suffix = " - Série Diferenciada", 
-              filename = "plots/03_acf_pacf_diferenciada.png")
+              filename = "plots/03_acf_pacf_diferenciada.html")
 
 # 3.5. Ajuste dos Modelos ARIMA
 message("--- Ajustando Modelos ARIMA ---")
@@ -102,7 +102,7 @@ fitted_models <- list(
 message("Modelos ajustados com sucesso.")
 
 # 3.6. Análise de Resíduos e Seleção de Modelo
-message("--- Iniciando Análise de Resíduos e salvando gráficos ---")
+message("--- Iniciando Análise de Resíduos e salvando gráficos interativos ---")
 for (model_name in names(fitted_models)) {
   model <- fitted_models[[model_name]]
   
@@ -112,10 +112,23 @@ for (model_name in names(fitted_models)) {
   analyze_model_residuals(model_name, model)
   plot_residual_diagnostics(model_name, 
                             model, 
-                            filename = paste0("plots/04_residuals_", sanitized_model_name, ".png"))
+                            filename = paste0("plots/04_residuals_", sanitized_model_name, ".html"))
 }
 
-# 3.7. Conclusão Final
+# 3.7. Gerar e Salvar Previsões
+message("--- Gerando e salvando gráficos de previsão interativos ---")
+for (model_name in names(fitted_models)) {
+  model <- fitted_models[[model_name]]
+  
+  # Cria um nome de arquivo seguro
+  sanitized_model_name <- gsub("[()]", "", model_name)
+  
+  plot_forecast(model,
+                h = 30, # Previsão para 30 dias à frente
+                filename = paste0("plots/05_forecast_", sanitized_model_name, ".html"))
+}
+
+# 3.8. Conclusão Final
 message("--- Conclusão da Análise ---")
 message("A seleção do melhor modelo é baseada em dois critérios principais:")
 message("1. Resíduos 'bem comportados': Ausência de autocorrelação (Teste Ljung-Box com p > 0.05) e normalidade.")

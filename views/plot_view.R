@@ -4,59 +4,94 @@
 # como gráficos da série temporal, ACF/PACF, e diagnósticos de resíduos.
 # -----------------------------------------------------------------------------
 library(ggplot2)
+library(plotly)
+library(htmlwidgets)
 
-# Função para plotar a série temporal e salvar em arquivo
+# Função para plotar a série temporal e salvar em arquivo interativo
 plot_time_series <- function(data, title = "Série Temporal", filename) {
-  p <- ggplot(data, aes(x = date, y = price)) +
+  p <- ggplot(data, aes(x = date, y = price, text = paste("Data:", date, "<br>Preço:", price))) +
     geom_line() +
-    labs(title = title,
-         x = "Data",
-         y = "Preço") +
+    labs(title = title, x = "Data", y = "Preço") +
     theme_minimal()
   
-  # Salva o gráfico em arquivo
-  ggsave(filename, plot = p, width = 10, height = 6)
-  message(paste("Gráfico da série temporal salvo em:", filename))
+  ip <- ggplotly(p, tooltip = "text")
   
-  # Exibe o gráfico na sessão interativa
-  print(p)
+  saveWidget(ip, filename, selfcontained = FALSE)
+  message(paste("Gráfico interativo da série temporal salvo em:", filename))
+  
+  print(ip)
 }
 
-# Função para plotar ACF e PACF lado a lado e salvar em arquivo
+# Função para plotar ACF e PACF interativos e salvar em arquivo
 plot_acf_pacf <- function(time_series, title_suffix = "", filename) {
-  # Abre o dispositivo gráfico PNG
-  png(filename, width = 800, height = 400)
+  p_acf <- ggAcf(time_series) + labs(title = paste("ACF", title_suffix))
+  p_pacf <- ggPacf(time_series) + labs(title = paste("PACF", title_suffix))
   
-  # Configura o layout para 2 gráficos em uma linha
-  par(mfrow = c(1, 2))
+  ip <- subplot(ggplotly(p_acf), ggplotly(p_pacf), nrows = 1, titleX = TRUE, titleY = TRUE) %>%
+    layout(title = paste("ACF & PACF", title_suffix))
+    
+  saveWidget(ip, filename, selfcontained = FALSE)
+  message(paste("Gráficos ACF/PACF interativos salvos em:", filename))
   
-  # Plota o ACF
-  acf(time_series, main = paste("ACF", title_suffix))
-  
-  # Plota o PACF
-  pacf(time_series, main = paste("PACF", title_suffix))
-  
-  # Fecha o dispositivo, salvando o arquivo
-  dev.off()
-  
-  # Restaura o layout de gráfico padrão para a sessão interativa
-  par(mfrow = c(1, 1))
-  
-  message(paste("Gráficos ACF/PACF salvos em:", filename))
+  print(ip)
 }
 
-# Função para plotar os diagnósticos de resíduos e salvar em arquivo
+# Função para plotar os diagnósticos de resíduos interativos e salvar
 plot_residual_diagnostics <- function(model_name, model_object, filename) {
-  # Abre o dispositivo gráfico PNG
-  png(filename, width = 800, height = 600)
+  message(paste("\n3. Gerando gráficos de diagnóstico interativos para o Modelo:", model_name))
   
-  message(paste("\n3. Gerando gráficos de diagnóstico para o Modelo:", model_name))
+  res <- residuals(model_object)
+  res_df <- data.frame(residuals = as.vector(res), time = seq_along(res))
   
-  # A função checkresiduals plota os resíduos, o ACF e o histograma
-  checkresiduals(model_object)
+  # 1. Gráfico de resíduos ao longo do tempo
+  p_res <- ggplot(res_df, aes(x = time, y = residuals)) +
+    geom_line() +
+    geom_point() +
+    labs(title = "Resíduos ao longo do tempo", x = "Tempo", y = "Resíduos") +
+    theme_minimal()
+    
+  # 2. Gráfico ACF dos resíduos
+  p_acf <- ggAcf(res) + labs(title = "ACF dos Resíduos")
   
-  # Fecha o dispositivo, salvando o arquivo
-  dev.off()
+  # 3. Histograma dos resíduos
+  p_hist <- ggplot(res_df, aes(x = residuals)) +
+    geom_histogram(aes(y = ..density..), bins = 30, fill = "lightblue") +
+    geom_density(color = "red") +
+    labs(title = "Histograma dos Resíduos", x = "Resíduos", y = "Densidade") +
+    theme_minimal()
+    
+  # Combina os gráficos em um único widget interativo
+  ip <- subplot(
+    ggplotly(p_res),
+    subplot(ggplotly(p_acf), ggplotly(p_hist), nrows = 1, titleX = TRUE),
+    nrows = 2,
+    heights = c(0.5, 0.5),
+    titleY = TRUE
+  ) %>% layout(title = paste("Diagnóstico de Resíduos para", model_name))
   
-  message(paste("Gráficos de diagnóstico salvos em:", filename))
+  saveWidget(ip, filename, selfcontained = FALSE)
+  message(paste("Gráficos de diagnóstico interativos salvos em:", filename))
+  
+  print(ip)
+}
+
+# Função para plotar e salvar a previsão interativa de um modelo
+plot_forecast <- function(model, h = 30, filename) {
+  fc <- forecast(model, h = h)
+  
+  p <- autoplot(fc) +
+    labs(
+      title = paste("Previsão do Modelo", model$method),
+      subtitle = paste("Previsão para os próximos", h, "períodos"),
+      x = "Tempo",
+      y = "Preço"
+    ) +
+    theme_minimal()
+  
+  ip <- ggplotly(p)
+  
+  saveWidget(ip, filename, selfcontained = FALSE)
+  message(paste("Gráfico de previsão interativo salvo em:", filename))
+  
+  print(ip)
 }
