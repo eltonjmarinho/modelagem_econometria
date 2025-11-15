@@ -6,48 +6,46 @@
 library(ggplot2)
 library(plotly)
 library(htmlwidgets)
+library(htmltools)
+library(scales) # for date_format
 
-# Função para plotar a série temporal e salvar em arquivo interativo
-plot_time_series <- function(data, title = "Série Temporal", filename) {
-  p <- ggplot(data, aes(x = date, y = price, text = paste("Data:", date, "<br>Preço:", price))) +
+# Função para plotar a série temporal e retornar o objeto plotly
+plot_time_series <- function(data, title = "Série Temporal") {
+  p <- ggplot(data, aes(x = date, y = price)) +
     geom_line() +
-    labs(title = title, x = "Data", y = "Preço") +
+    labs(title = title, x = "Ano", y = "Preço") +
+    scale_x_date(date_labels = "%Y", date_breaks = "1 year") +
     theme_minimal()
   
-  ip <- ggplotly(p, tooltip = "text")
-  
-  saveWidget(ip, filename, selfcontained = FALSE)
-  message(paste("Gráfico interativo da série temporal salvo em:", filename))
-  
-  print(ip)
+  ggplotly(p)
 }
 
-# Função para plotar ACF e PACF interativos e salvar em arquivo
-plot_acf_pacf <- function(time_series, title_suffix = "", filename) {
+# Função para plotar ACF e PACF interativos e retornar o objeto plotly
+plot_acf_pacf <- function(time_series, title_suffix = "") {
   p_acf <- ggAcf(time_series) + labs(title = paste("ACF", title_suffix))
   p_pacf <- ggPacf(time_series) + labs(title = paste("PACF", title_suffix))
   
-  ip <- subplot(ggplotly(p_acf), ggplotly(p_pacf), nrows = 1, titleX = TRUE, titleY = TRUE) %>%
+  subplot(ggplotly(p_acf), ggplotly(p_pacf), nrows = 1, titleX = TRUE, titleY = TRUE) %>%
     layout(title = paste("ACF & PACF", title_suffix))
-    
-  saveWidget(ip, filename, selfcontained = FALSE)
-  message(paste("Gráficos ACF/PACF interativos salvos em:", filename))
-  
-  print(ip)
 }
 
-# Função para plotar os diagnósticos de resíduos interativos e salvar
-plot_residual_diagnostics <- function(model_name, model_object, filename) {
-  message(paste("\n3. Gerando gráficos de diagnóstico interativos para o Modelo:", model_name))
-  
+# Função para plotar os diagnósticos de resíduos interativos e retornar o objeto plotly
+plot_residual_diagnostics <- function(model_name, model_object, data) {
   res <- residuals(model_object)
-  res_df <- data.frame(residuals = as.vector(res), time = seq_along(res))
+  
+  # Ajusta os dados se o número de resíduos for menor (devido à diferenciação)
+  if (length(res) < nrow(data)) {
+    data <- data[(nrow(data) - length(res) + 1):nrow(data), ]
+  }
+  
+  res_df <- data.frame(residuals = as.vector(res), date = data$date)
   
   # 1. Gráfico de resíduos ao longo do tempo
-  p_res <- ggplot(res_df, aes(x = time, y = residuals)) +
-    geom_line() +
-    geom_point() +
-    labs(title = "Resíduos ao longo do tempo", x = "Tempo", y = "Resíduos") +
+  p_res <- ggplot(res_df, aes(x = date, y = residuals)) +
+    geom_line(linewidth = 0.5) +
+    geom_point(size = 0.8) +
+    labs(title = "Resíduos ao longo do tempo", x = "Ano", y = "Resíduos") +
+    scale_x_date(date_labels = "%Y", date_breaks = "1 year") +
     theme_minimal()
     
   # 2. Gráfico ACF dos resíduos
@@ -61,37 +59,83 @@ plot_residual_diagnostics <- function(model_name, model_object, filename) {
     theme_minimal()
     
   # Combina os gráficos em um único widget interativo
-  ip <- subplot(
+  subplot(
     ggplotly(p_res),
     subplot(ggplotly(p_acf), ggplotly(p_hist), nrows = 1, titleX = TRUE),
     nrows = 2,
     heights = c(0.5, 0.5),
     titleY = TRUE
   ) %>% layout(title = paste("Diagnóstico de Resíduos para", model_name))
-  
-  saveWidget(ip, filename, selfcontained = FALSE)
-  message(paste("Gráficos de diagnóstico interativos salvos em:", filename))
-  
-  print(ip)
 }
 
-# Função para plotar e salvar a previsão interativa de um modelo
-plot_forecast <- function(model, h = 30, filename) {
+# Função para plotar a previsão interativa de um modelo e retornar o objeto plotly
+plot_forecast <- function(model, data, h = 30) {
   fc <- forecast(model, h = h)
   
-  p <- autoplot(fc) +
+  # Dados originais
+  df_orig <- data.frame(
+    date = data$date,
+    price = as.vector(model$x)
+  )
+  
+  # Dados previstos
+  last_date <- data$date[nrow(data)]
+  future_dates <- seq(from = last_date + 1, by = "day", length.out = h)
+  
+  df_fc <- data.frame(
+    date = future_dates,
+    point_forecast = as.vector(fc$mean),
+    lower_80 = fc$lower[, 1],
+    upper_80 = fc$upper[, 1],
+    lower_95 = fc$lower[, 2],
+    upper_95 = fc$upper[, 2]
+  )
+  
+  p <- ggplot() +
+    geom_line(data = df_orig, aes(x = date, y = price), color = "black") +
+    geom_line(data = df_fc, aes(x = date, y = point_forecast), color = "blue") +
+    geom_ribbon(data = df_fc, aes(x = date, ymin = lower_95, ymax = upper_95), fill = "blue", alpha = 0.2, inherit.aes = FALSE) +
+    geom_ribbon(data = df_fc, aes(x = date, ymin = lower_80, ymax = upper_80), fill = "blue", alpha = 0.4, inherit.aes = FALSE) +
     labs(
       title = paste("Previsão do Modelo", model$method),
       subtitle = paste("Previsão para os próximos", h, "períodos"),
-      x = "Tempo",
+      x = "Ano",
       y = "Preço"
     ) +
+    scale_x_date(date_labels = "%Y", date_breaks = "1 year") +
     theme_minimal()
+    
+  ggplotly(p)
+}
+
+# Função para salvar uma lista de elementos (gráficos, texto) em um único HTML
+save_report_as_html <- function(items, filename) {
+  # Converte todos os itens para tags HTML
+  html_items <- lapply(items, function(item) {
+    if (inherits(item, "htmlwidget")) {
+      # Para gráficos plotly/htmlwidget
+      tags$div(style = "width:100%; height:auto; margin-bottom: 20px;", item)
+    } else if (is.character(item)) {
+      # Para texto (que pode conter HTML)
+      tags$div(style = "width:100%; margin-bottom: 20px;", HTML(item))
+    } else {
+      # Para outros tipos de tags htmltools
+      item
+    }
+  })
   
-  ip <- ggplotly(p)
+  # Cria o corpo do HTML com todos os itens
+  doc <- tags$html(
+    tags$head(
+      tags$title("Relatório de Análise de Séries Temporais")
+    ),
+    tags$body(
+      h1("Relatório de Análise de Séries Temporais - Preços do Café"),
+      html_items
+    )
+  )
   
-  saveWidget(ip, filename, selfcontained = FALSE)
-  message(paste("Gráfico de previsão interativo salvo em:", filename))
+  save_html(doc, file = filename, background = "white", libdir = "lib")
   
-  print(ip)
+  message(paste("Relatório HTML completo salvo em:", filename))
 }
